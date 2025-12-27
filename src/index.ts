@@ -1,6 +1,8 @@
 import express, { Application, Router } from "express";
 import dotenv from "dotenv";
 import { Request, Response } from "express"; // Import Request and Response from express module
+import { pool } from "config/database";
+import errorHandler from "./middleware/errorHandler";
 // import userRoutes from "routes/userRoutes";
 // import productRoutes from "./routes/productRoutes"; // Corrected import path
 // import userRoutes from "./routes/userRoutes";
@@ -18,15 +20,23 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // middleware function for error handling
-// app.use(errorHandler);
+app.use(errorHandler);
 
 // middleware for body-parser
-app.use(express.json())
+app.use(express.json());
 
 const router: Router = express.Router();
-// app.use("/api/users", userRoutes); 
+// app.use("/api/users", userRoutes);
 
-// server to listen to the specific port (5000)
-app.listen(port, () => {
-  console.log(`server running on port ${port}`);
-});
+pool.connect().then((client: any) => {
+  console.log("Connected to the postgresql database");
+  client.release();
+
+  app.listen(port, () => {
+    console.log(`server running on port ${port}`);
+  });
+})
+.catch((err: unknown) => {
+  console.error("Error connecting to the database", err);
+  process.exit(1);
+})
