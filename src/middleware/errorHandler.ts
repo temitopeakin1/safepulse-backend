@@ -1,64 +1,49 @@
-import { constants } from "../../constants";
 import { Request, Response, NextFunction } from "express";
+import { constants } from "../../constants";
 
 const errorHandler = (
   err: Error,
   _req: Request,
   res: Response,
   _next: NextFunction
-): void => {
-  const statusCode = res.statusCode ? res.statusCode : 500;
+) => {
+  const statusCode = res.statusCode || 500;
+
   switch (statusCode) {
     case constants.VALIDATION_ERROR:
-      res.json({
+      return res.status(statusCode).json({
         title: "Validation Failed",
         message: err.message,
-        stackTrace: err.stack,
       });
-      break;
 
     case constants.UNAUTHORIZED:
-      res.json({
-        title: 'Unauthorized',
+      return res.status(statusCode).json({
+        title: "Unauthorized",
         message: err.message,
-        stackTrace: err.stack,
       });
-      break;
 
     case constants.FORBIDDEN:
-      res.json({
-        title: 'Forbidden',
+      return res.status(statusCode).json({
+        title: "Forbidden",
         message: err.message,
-        stackTrace: err.stack,
       });
-      break;
 
     case constants.NOT_FOUND:
-      res.json({
-        title: 'Unauthorized',
+      return res.status(statusCode).json({
+        title: "Not Found",
         message: err.message,
-        stackTrace: err.stack,
       });
-      break;
-
-    case constants.UNAUTHORIZED:
-      res.json({
-        title: "Not found",
+    case constants.CONFLICT:
+      return res
+        .status(statusCode).json({ 
+          title: "Conflict", 
+          message: err.message 
+        });
+    default:
+      return res.status(500).json({
+        title: "Server Error",
         message: err.message,
-        stackTrace: err.stack,
       });
-      break;
-
-     case constants.SERVER_ERROR:
-      res.json({
-        title: 'Server error',
-        message: err.message,
-        stackTrace: err.stack,
-      });
-      break;
-      default:
-      console.log("No error, all good!");
-      break;
   }
 };
 

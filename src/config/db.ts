@@ -1,9 +1,15 @@
 import { Pool } from "pg";
+import dotenv from "dotenv"
 
-export const pool = new Pool({
-  host: "localhost",
-  user: "postgres",
-  port: 5432,
+dotenv.config()
+
+
+console.log(Pool)
+
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  port: Number(process.env.DB_PORT),
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
@@ -12,3 +18,5 @@ export const pool = new Pool({
 pool.on("connect", () => {
   console.log("PostgreSQL pool connected");
 });
+
+export default pool;

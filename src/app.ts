@@ -1,9 +1,16 @@
-import express from "express"
-import userRoutes from "routes/userRoutes"
+import express from "express";
+import userRoutes from "./routes/userRoutes";
+import errorHandler from "./middleware/errorHandler";
 
-const app = express()
+const app = express();
 
-app.use(express.json())
-app.use("/api/users", userRoutes)
+// body parser
+app.use(express.json());
 
-export default app
+// routes
+app.use("/api/users", userRoutes);
+
+// error handler (must be last)
+app.use(errorHandler);
+
+export default app;
