@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky install"
+    "prepare": "husky install || true"
   },
   "keywords": [],
   "author": "",
