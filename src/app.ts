@@ -1,6 +1,6 @@
 import express from "express";
-import userRoutes from "./routes/userRoutes";
 import errorHandler from "./middleware/errorHandler";
+import authRoutes from "./routes/authRoutes";
 
 const app = express();
 
@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 // routes
-app.use("/api/users", userRoutes);
+app.use("/api/users", authRoutes);
 
 // error handler (must be last)
 app.use(errorHandler);
