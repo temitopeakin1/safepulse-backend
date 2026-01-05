@@ -52,7 +52,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
-// login user
+// login user endpoint
 const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -72,8 +72,10 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     throw new Error("Invalid email or password");
   }
 
-  // update last login 
-  await pool.query("UPDATE users SET last_login = NOW() WHERE id = $1", [user.id]);
+  // update last login
+  await pool.query("UPDATE users SET last_login = NOW() WHERE id = $1", [
+    user.id,
+  ]);
 
   // create JWT Token
   const secretKey = process.env.ACCESS_TOKEN_SECRET;
@@ -81,17 +83,104 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     res.status(500);
     throw new Error("JWT secret is not defined");
   }
+
   const accessToken = jwt.sign(
     { id: user.id, email: user.email, username: user.username },
     process.env.ACCESS_TOKEN_SECRET as string,
-    { expiresIn: "1h" }
+    { expiresIn: "15m" }
   );
+
+  // refresh token
+  const refreshToken = jwt.sign(
+    { id: user.id },
+    process.env.REFRESH_TOKEN_SECRET as string,
+    { expiresIn: "7d" }
+  );
+
+  // store refresh token in DB
+  await pool.query("UPDATE users SET refresh_token = $1 WHERE id = $2", [
+    refreshToken,
+    user.id,
+  ]);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 
   res.status(200).json({
     success: true,
     accessToken,
+    //refreshToken,
   });
 });
+
+// logout user endpoint
+const logoutUser = asyncHandler(async (req: Request, res: Response) => {
+  const refreshToken = req.cookies?.refreshToken;
+
+  if (refreshToken) {
+    await pool.query(
+      "UPDATE users SET refresh_token = NULL WHERE refresh_token = $1",
+      [refreshToken]
+    );
+  }
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "User Logged out successfully",
+  });
+});
+
+// refresh token endpoint
+const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
+  // try cookie first, fallback to body (for Postman testing)
+  const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+  if (!refreshToken) {
+    res.status(401);
+    throw new Error("Refresh token missing");
+  }
+
+  // find user with this refresh token
+  const result = await pool.query(
+    "SELECT * FROM users WHERE refresh_token = $1",
+    [refreshToken]
+  );
+
+  const user = result.rows[0];
+  if (!user) {
+    res.status(403);
+    throw new Error("Invalid refresh token");
+  }
+
+  // verify refresh token
+  try {
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET as string);
+  } catch {
+    res.status(403);
+    throw new Error("Invalid refresh token");
+  }
+
+  const newAccessToken = jwt.sign(
+    { id: user.id, email: user.email, username: user.username },
+    process.env.ACCESS_TOKEN_SECRET as string,
+    { expiresIn: "15m" }
+  );
+
+  res.status(200).json({
+    accessToken: newAccessToken,
+  });
+});
+
 
 // current user info (private)
 // Get current user (requires auth middleware)
@@ -108,4 +197,4 @@ const currentUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export { registerUser, loginUser, currentUser };
+export { registerUser, loginUser, currentUser, logoutUser, refreshAccessToken };
