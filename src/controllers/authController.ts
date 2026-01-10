@@ -87,7 +87,7 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const accessToken = jwt.sign(
     { id: user.id, email: user.email, username: user.username },
     process.env.ACCESS_TOKEN_SECRET as string,
-    { expiresIn: "15m" }
+    { expiresIn: "1h" }
   );
 
   // refresh token
@@ -96,6 +96,7 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     process.env.REFRESH_TOKEN_SECRET as string,
     { expiresIn: "7d" }
   );
+ 
 
   // store refresh token in DB
   await pool.query("UPDATE users SET refresh_token = $1 WHERE id = $2", [
