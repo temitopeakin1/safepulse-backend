@@ -13,7 +13,7 @@ export const uploadBase64 = async (
       folder,
       resource_type: "auto",
       access_mode: "authenticated",
-      max_bytes: 10 * 1024 * 1024, // 10 MB
+      max_bytes: 10 * 1024 * 1024, 
     });
 
     console.log(`Cloudinary upload successful: ${res.secure_url}`);
@@ -21,7 +21,6 @@ export const uploadBase64 = async (
   } catch (err: any) {
     console.error("Cloudinary upload failed. Full error:", err);
 
-    // Forward Cloudinary's message if available
     const message =
       err?.message || err?.error?.message || "Cloudinary upload failed";
 
