@@ -3,14 +3,44 @@ import asyncHandler from "express-async-handler";
 import pool from "../config/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import * as UserModel from "../models/userModel";
+import * as PasswordResetModel from "../models/passwordResetModel";
+import crypto from "crypto";
+import { validateLoginPayload, validateRegisterPayload, validateResetPasswordPayload } from "../validators/auth";
+
+//  validate password
+const validatePassword = (password: string) => {
+  const minLength = 8;
+
+  if (password.length < minLength)
+    return `Password must be at least ${minLength} characters`;
+  if (/\s/.test(password)) return "Password must not contain spaces";
+  if (!/[a-z]/.test(password))
+    return "Password must include at least one lowercase letter";
+  if (!/[A-Z]/.test(password))
+    return "Password must include at least one uppercase letter";
+  if (!/[0-9]/.test(password))
+    return "Password must include at least one number";
+  if (!/[^A-Za-z0-9]/.test(password))
+    return "Password must include at least one special character";
+
+  return null;
+};
 
 // Register user
 const registerUser = asyncHandler(async (req: Request, res: Response) => {
+ const validationError = validateRegisterPayload(req.body);
+  if (validationError) {
+    res.status(400);
+    throw new Error(validationError);
+  }
+
   const { username, email, password } = req.body;
 
-  if (!username || !email || !password) {
+  const passwordError = validatePassword(password);
+  if (passwordError) {
     res.status(400);
-    throw new Error("All fields are mandatory");
+    throw new Error(passwordError);
   }
 
   // email regex validation
@@ -29,7 +59,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
       VALUES ($1, $2, $3)
       RETURNING id, username, email, created_at
       `,
-      [username, email, hashedPassword]
+      [username, email, hashedPassword],
     );
 
     res.status(201).json({
@@ -54,12 +84,12 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
 
 // login user endpoint
 const loginUser = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
+const validationError = validateLoginPayload(req.body);
+  if (validationError) {
     res.status(400);
-    throw new Error("Please complete all fields");
+    throw new Error(validationError);
   }
+  const { email, password } = req.body;
 
   // find user by email
   const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [
@@ -87,16 +117,15 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const accessToken = jwt.sign(
     { id: user.id, email: user.email, username: user.username },
     process.env.ACCESS_TOKEN_SECRET as string,
-    { expiresIn: "20m" }
+    { expiresIn: "20m" },
   );
 
   // refresh token
   const refreshToken = jwt.sign(
     { id: user.id },
     process.env.REFRESH_TOKEN_SECRET as string,
-    { expiresIn: "7d" }
+    { expiresIn: "7d" },
   );
- 
 
   // store refresh token in DB
   await pool.query("UPDATE users SET refresh_token = $1 WHERE id = $2", [
@@ -114,7 +143,91 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     accessToken,
-    //refreshToken,
+    refreshToken,
+  });
+});
+
+// forget password endpoint
+const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body as { email: string };
+
+  // validate
+  if (!email) {
+    res.status(400);
+    throw new Error("Email is required");
+  }
+
+  const user = await UserModel.findUserByEmail(email);
+
+  // IMPORTANT: don’t leak whether email exists
+  if (!user) {
+    res.status(200).json({
+      success: true,
+      message: "If the email exists, a reset link has been sent.",
+    });
+    return;
+  }
+
+  await PasswordResetModel.invalidateUserTokens(user.id);
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await PasswordResetModel.createResetToken(user.id, tokenHash, expiresAt);
+
+  const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+  const resetLink = `${clientUrl}/reset-password?token=${token}`;
+
+  console.log("[RESET PASSWORD LINK]", resetLink);
+
+  res.status(200).json({
+    success: true,
+    message: "If the email exists, a reset link has been sent.",
+  });
+  return;
+});
+
+// reset password endpoint
+const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const validationError = validateResetPasswordPayload(req.body);
+  if (validationError) {
+    res.status(400);
+    throw new Error(validationError);
+  }
+
+  const { token, newPassword } = req.body as {
+    token: string;
+    newPassword: string;
+    confirmPassword?: string;
+  };
+
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) {
+    res.status(400);
+    throw new Error(passwordError);
+  }
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const record = await PasswordResetModel.findValidResetToken(tokenHash);
+
+  if (!record) {
+    res.status(400);
+    throw new Error("Invalid or expired reset token");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await pool.query(
+    "UPDATE users SET password = $1, refresh_token = NULL WHERE id = $2",
+    [hashedPassword, record.user_id]
+  );
+
+  await PasswordResetModel.markTokenUsed(record.id);
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset successful",
   });
 });
 
@@ -125,7 +238,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   if (refreshToken) {
     await pool.query(
       "UPDATE users SET refresh_token = NULL WHERE refresh_token = $1",
-      [refreshToken]
+      [refreshToken],
     );
   }
 
@@ -154,7 +267,7 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
   // find user with this refresh token
   const result = await pool.query(
     "SELECT * FROM users WHERE refresh_token = $1",
-    [refreshToken]
+    [refreshToken],
   );
 
   const user = result.rows[0];
@@ -174,14 +287,13 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
   const newAccessToken = jwt.sign(
     { id: user.id, email: user.email, username: user.username },
     process.env.ACCESS_TOKEN_SECRET as string,
-    { expiresIn: "15m" }
+    { expiresIn: "15m" },
   );
 
   res.status(200).json({
     accessToken: newAccessToken,
   });
 });
-
 
 // current user info (private)
 // Get current user (requires auth middleware)
@@ -198,4 +310,12 @@ const currentUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export { registerUser, loginUser, currentUser, logoutUser, refreshAccessToken };
+export {
+  registerUser,
+  loginUser,
+  currentUser,
+  logoutUser,
+  refreshAccessToken,
+  forgotPassword,
+  resetPassword,
+};
