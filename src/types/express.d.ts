@@ -8,6 +8,8 @@ declare global {
         email: string;
         username: string;
       };
+      /** Set by validateBody middleware with parsed, validated payload */
+      validated?: unknown;
     }
   }
 }
