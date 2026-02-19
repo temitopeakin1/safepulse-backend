@@ -8,6 +8,7 @@ import * as PasswordResetModel from "../models/passwordResetModel";
 import * as EmailVerificationModel from "../models/emailVerificationModel";
 import crypto from "crypto";
 import * as NotificationPreferencesModel from "../models/notificationPreferencesModel";
+import { sendVerificationEmail } from "../utils/email";
 import type {
   RegisterInput,
   LoginInput,
@@ -57,7 +58,10 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
 
     const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
     const verificationLink = `${clientUrl}/verify-email?token=${token}`;
-    console.log("[EMAIL VERIFICATION LINK]", verificationLink);
+    await sendVerificationEmail(newUser.email, verificationLink, newUser.first_name);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[EMAIL VERIFICATION LINK]", verificationLink);
+    }
 
     const payload: { status: number; message: string; user: object; verificationLink?: string; token?: string } = {
       status: 201,
@@ -208,7 +212,10 @@ const resendVerificationEmail = asyncHandler(async (req: Request, res: Response)
   await EmailVerificationModel.createVerificationToken(user.id, tokenHash, expiresAt);
   const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
   const verificationLink = `${clientUrl}/verify-email?token=${token}`;
-  console.log("[EMAIL VERIFICATION LINK]", verificationLink);
+  await sendVerificationEmail((user as any).email, verificationLink, (user as any).first_name);
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[EMAIL VERIFICATION LINK]", verificationLink);
+  }
   const payload: { success: boolean; message: string; verificationLink?: string; token?: string } = {
     success: true,
     message: "If an account exists with this email, a new verification link has been sent.",

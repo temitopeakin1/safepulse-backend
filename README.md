@@ -38,6 +38,10 @@ Create a `.env` file in the project root:
 PORT=4000
 NODE_ENV=development
 
+# Local frontend (for CORS and email verification link)
+CORS_ORIGIN=http://localhost:3000
+CLIENT_URL=http://localhost:3000
+
 # Database
 DB_HOST=localhost
 DB_PORT=5432
@@ -48,6 +52,17 @@ DB_NAME=safepulse_db
 # JWT
 ACCESS_TOKEN_SECRET=your_access_secret
 REFRESH_TOKEN_SECRET=your_refresh_secret
+
+# Email (verification & password reset links) — required for real emails
+CLIENT_URL=http://localhost:3000
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-smtp-user
+SMTP_PASSWORD=your-smtp-password
+FROM_EMAIL=noreply@yourdomain.com
+APP_NAME=Safepulse
+# If SMTP_* are not set, verification emails are not sent (dev: link still returned in API response).
 
 # Optional: Cloudinary (for uploads)
 # CLOUDINARY_CLOUD_NAME=
@@ -84,6 +99,26 @@ npm start
 
 Server runs at **http://localhost:4000** (or the port in `.env`).  
 API docs: **http://localhost:4000/docs**.
+
+### 5. Testing with a local frontend
+
+To run your frontend (e.g. React/Vite on port 3000 or 5173) and have it call this backend on your machine:
+
+1. **Backend:** Start this API (`npm run dev`). It will listen on **http://localhost:4000**.
+2. **CORS:** The API allows requests from `http://localhost:3000` by default. If your frontend runs on another port (e.g. Vite’s **5173**), set in `.env`:
+   ```env
+   CORS_ORIGIN=http://localhost:5173
+   ```
+   Then restart the backend.
+3. **Frontend API base URL:** In your frontend app, set the API base URL to this backend, e.g. **http://localhost:4000** (or use an env var like `VITE_API_URL=http://localhost:4000`). All API calls should go to `http://localhost:4000/api/v1/...`.
+4. **Email verification links:** Set `CLIENT_URL` in the backend `.env` to your frontend’s URL so the link in the email points to your app:
+   ```env
+   CLIENT_URL=http://localhost:3000
+   ```
+   or `http://localhost:5173` if that’s where the frontend runs. The verification link will be `{CLIENT_URL}/verify-email?token=...`.
+5. **Cookies (refresh token):** If the frontend uses cookies, use the same origin as CORS and ensure requests use `credentials: true` (or `withCredentials: true`).
+
+Quick check: open **http://localhost:4000/api/v1** in the browser; you should see `{"name":"Safepulse API",...}`. From the frontend, call `GET http://localhost:4000/api/v1`; if CORS is correct, the response will show without a CORS error in the console.
 
 ## API Overview
 

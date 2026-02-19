@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import errorHandler from "./middleware/errorHandler";
 import authRoutes from "./routes/authRoutes";
 import kycRoutes from "./routes/kycRoutes";
@@ -10,6 +11,15 @@ import { swaggerSpec } from "./docs/swagger";
 const app = express();
 export { app };
 export default app;
+
+// CORS: allow frontend (local or deployed) to call the API
+const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+app.use(
+  cors({
+    origin: corsOrigin,
+    credentials: true,
+  })
+);
 
 // body parser
 app.use(express.json());
