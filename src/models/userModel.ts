@@ -8,31 +8,26 @@ export interface User {
   created_at: Date;
 }
 
-// Function to find a user by email
 export const findUserByEmail = async (email: string): Promise<User | null> => {
   const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
   return result.rows[0];
 };
 
-// Function to find a user by ID (includes password for change-password verification)
 export const findUserById = async (userId: string): Promise<(User & { password?: string }) | null> => {
   const result = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
   return result.rows[0] ?? null;
 };
 
-// Function to find a user by phone number (for uniqueness check on register)
 export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User | null> => {
   const result = await pool.query("SELECT * FROM users WHERE phone_number = $1", [phoneNumber]);
   return result.rows[0];
 };
 
-// Function to find username by user ID
 export const findUsernameById = async (id: number): Promise<string | null> => {
   const result = await pool.query("SELECT username FROM users WHERE id = $1", [id]);
   return result.rows[0]?.username;
 };
 
-// Function to create a new user
 export const createUser = async (username: string, email: string, password: string): Promise<User> => {
   const result = await pool.query(
     "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
@@ -48,7 +43,6 @@ export interface UpdateProfileData {
   email?: string;
 }
 
-// Function to update user profile (name, phone, email)
 export const updateUserProfile = async (
   userId: string,
   data: UpdateProfileData
@@ -85,7 +79,6 @@ export const updateUserProfile = async (
   return result.rows[0] ?? null;
 };
 
-// Function to update user password (for change-password)
 export const updateUserPassword = async (userId: string, hashedPassword: string): Promise<void> => {
   await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, userId]);
 };
