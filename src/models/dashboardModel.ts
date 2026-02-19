@@ -16,7 +16,6 @@ export const fetchDashboardSummary = async (filters: SummaryFilters) => {
     where.push(`created_at >= $${values.length}::date`);
   }
 
-  // created_at < to + 1 day (inclusive end date)
   if (filters.to) {
     values.push(filters.to);
     where.push(`created_at < ($${values.length}::date + INTERVAL '1 day')`);
