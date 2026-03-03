@@ -10,9 +10,7 @@ export const swaggerSpec = swaggerJSDoc({
       version: "1.0.0",
       description: "API documentation for SafePulse backend",
     },
-    servers: [
-      { url: "http://localhost:4000", description: "Development" },
-    ],
+    servers: [{ url: "http://localhost:4000", description: "Development" }],
     components: {
       securitySchemes: {
         bearerAuth: {

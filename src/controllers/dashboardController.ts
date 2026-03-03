@@ -14,38 +14,50 @@ const timeAgo = (date: Date) => {
   return `${day}d`;
 };
 
-export const getDashboardSummary = asyncHandler(async (req: Request, res: Response) => {
-  const { from, to, city } = req.query as { from?: string; to?: string; city?: string };
+export const getDashboardSummary = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { from, to, city } = req.query as {
+      from?: string;
+      to?: string;
+      city?: string;
+    };
 
-  const summary = await DashboardModel.fetchDashboardSummary({ from, to, city });
+    const summary = await DashboardModel.fetchDashboardSummary({
+      from,
+      to,
+      city,
+    });
 
-  res.status(200).json({ summary });
-});
+    res.status(200).json({ summary });
+  },
+);
 
-export const getDashboardActivity = asyncHandler(async (req: Request, res: Response) => {
-  const { from, to, city, limit } = req.query as {
-    from?: string;
-    to?: string;
-    city?: string;
-    limit?: string;
-  };
+export const getDashboardActivity = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { from, to, city, limit } = req.query as {
+      from?: string;
+      to?: string;
+      city?: string;
+      limit?: string;
+    };
 
-  const rows = await DashboardModel.fetchDashboardActivity({
-    from,
-    to,
-    city,
-    limit: limit ? Number(limit) : 10,
-  });
+    const rows = await DashboardModel.fetchDashboardActivity({
+      from,
+      to,
+      city,
+      limit: limit ? Number(limit) : 10,
+    });
 
-  const activity = rows.map((r: any) => ({
-    id: r.id,
-    incidentId: r.incident_id,
-    title: r.title,
-    locationName: r.location,
-    severity: r.severity,
-    status: r.status,
-    timeAgo: timeAgo(r.created_at),
-  }));
+    const activity = rows.map((r: any) => ({
+      id: r.id,
+      incidentId: r.incident_id,
+      title: r.title,
+      locationName: r.location,
+      severity: r.severity,
+      status: r.status,
+      timeAgo: timeAgo(r.created_at),
+    }));
 
-  res.status(200).json({ activity });
-});
+    res.status(200).json({ activity });
+  },
+);

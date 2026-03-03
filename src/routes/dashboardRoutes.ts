@@ -1,6 +1,8 @@
 import express from "express";
-import validateToken from "../middleware/validateTokenHandler";
-import { getDashboardActivity, getDashboardSummary } from "../controllers/dashboardController";
+import {
+  getDashboardActivity,
+  getDashboardSummary,
+} from "../controllers/dashboardController";
 
 const router = express.Router();
 
@@ -9,8 +11,8 @@ const router = express.Router();
  * /api/v1/dashboard/summary:
  *   get:
  *     tags: [Dashboard]
- *     summary: Get dashboard summary
- *     security: [{ bearerAuth: [] }]
+ *     summary: Get dashboard summary (public)
+ *     description: No auth required. Used for Home cards and public visitors.
  *     parameters:
  *       - in: query
  *         name: from
@@ -33,18 +35,16 @@ const router = express.Router();
  *               type: object
  *               properties:
  *                 summary: { type: object }
- *       401:
- *         description: Unauthorized
  */
-router.get("/summary", validateToken, getDashboardSummary);
+router.get("/summary", getDashboardSummary);
 
 /**
  * @openapi
  * /api/v1/dashboard/activity:
  *   get:
  *     tags: [Dashboard]
- *     summary: Get dashboard activity / incidents list
- *     security: [{ bearerAuth: [] }]
+ *     summary: Get dashboard activity / incidents list (public)
+ *     description: No auth required. Used for Home activity feed and public visitors.
  *     parameters:
  *       - in: query
  *         name: from
@@ -82,9 +82,7 @@ router.get("/summary", validateToken, getDashboardSummary);
  *                       severity: { type: string }
  *                       status: { type: string }
  *                       timeAgo: { type: string }
- *       401:
- *         description: Unauthorized
  */
-router.get("/activity", validateToken, getDashboardActivity);
+router.get("/activity", getDashboardActivity);
 
 export default router;

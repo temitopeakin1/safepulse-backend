@@ -11,8 +11,12 @@ const evidenceItemSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => !val || allowedEvidenceTypes.includes(val.toLowerCase() as (typeof allowedEvidenceTypes)[number]),
-      { message: "Evidence file_type must be one of: PNG, SVG, JPG, MP4" }
+      (val) =>
+        !val ||
+        allowedEvidenceTypes.includes(
+          val.toLowerCase() as (typeof allowedEvidenceTypes)[number],
+        ),
+      { message: "Evidence file_type must be one of: PNG, SVG, JPG, MP4" },
     ),
 });
 

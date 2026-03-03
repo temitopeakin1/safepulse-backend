@@ -82,6 +82,7 @@ psql -U safepulse_user -d safepulse_db -f src/data/migrations/add_unique_phone_n
 psql -U safepulse_user -d safepulse_db -f src/data/migrations/create_notification_preferences.sql
 psql -U safepulse_user -d safepulse_db -f src/data/migrations/create_incidents_table.sql
 psql -U safepulse_user -d safepulse_db -f src/data/migrations/add_incident_evidence.sql
+psql -U safepulse_user -d safepulse_db -f src/data/migrations/kyc_id_back_nullable.sql
 ```
 
 > **Note:** If `users.id` is **INTEGER** (not UUID), use the commented block in `add_email_verification.sql` for the `email_verification_tokens` table. If you use UUID for `users.id`, ensure `create_incidents_table.sql` matches (e.g. `user_id UUID REFERENCES users(id)`).

@@ -9,29 +9,46 @@ export interface User {
 }
 
 export const findUserByEmail = async (email: string): Promise<User | null> => {
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+    email,
+  ]);
   return result.rows[0];
 };
 
-export const findUserById = async (userId: string): Promise<(User & { password?: string }) | null> => {
-  const result = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
+export const findUserById = async (
+  userId: string,
+): Promise<(User & { password?: string }) | null> => {
+  const result = await pool.query("SELECT * FROM users WHERE id = $1", [
+    userId,
+  ]);
   return result.rows[0] ?? null;
 };
 
-export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User | null> => {
-  const result = await pool.query("SELECT * FROM users WHERE phone_number = $1", [phoneNumber]);
+export const findUserByPhoneNumber = async (
+  phoneNumber: string,
+): Promise<User | null> => {
+  const result = await pool.query(
+    "SELECT * FROM users WHERE phone_number = $1",
+    [phoneNumber],
+  );
   return result.rows[0];
 };
 
 export const findUsernameById = async (id: number): Promise<string | null> => {
-  const result = await pool.query("SELECT username FROM users WHERE id = $1", [id]);
+  const result = await pool.query("SELECT username FROM users WHERE id = $1", [
+    id,
+  ]);
   return result.rows[0]?.username;
 };
 
-export const createUser = async (username: string, email: string, password: string): Promise<User> => {
+export const createUser = async (
+  username: string,
+  email: string,
+  password: string,
+): Promise<User> => {
   const result = await pool.query(
     "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
-    [username, email, password]
+    [username, email, password],
   );
   return result.rows[0];
 };
@@ -45,7 +62,7 @@ export interface UpdateProfileData {
 
 export const updateUserProfile = async (
   userId: string,
-  data: UpdateProfileData
+  data: UpdateProfileData,
 ): Promise<any | null> => {
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -74,11 +91,17 @@ export const updateUserProfile = async (
   values.push(userId);
   const result = await pool.query(
     `UPDATE users SET ${updates.join(", ")} WHERE id = $${paramIndex} RETURNING id, first_name, last_name, phone_number, email, created_at`,
-    values
+    values,
   );
   return result.rows[0] ?? null;
 };
 
-export const updateUserPassword = async (userId: string, hashedPassword: string): Promise<void> => {
-  await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, userId]);
+export const updateUserPassword = async (
+  userId: string,
+  hashedPassword: string,
+): Promise<void> => {
+  await pool.query("UPDATE users SET password = $1 WHERE id = $2", [
+    hashedPassword,
+    userId,
+  ]);
 };

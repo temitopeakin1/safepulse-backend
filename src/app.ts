@@ -18,7 +18,7 @@ app.use(
   cors({
     origin: corsOrigin,
     credentials: true,
-  })
+  }),
 );
 
 // body parser
@@ -57,10 +57,6 @@ app.use("/api/v1/kyc", kycRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/incidents", incidentRoutes);
 
-
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(errorHandler);
-
-
-

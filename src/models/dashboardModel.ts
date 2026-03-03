@@ -10,7 +10,6 @@ export const fetchDashboardSummary = async (filters: SummaryFilters) => {
   const where: string[] = [];
   const values: any[] = [];
 
-  // created_at >= from
   if (filters.from) {
     values.push(filters.from);
     where.push(`created_at >= $${values.length}::date`);
@@ -29,7 +28,6 @@ export const fetchDashboardSummary = async (filters: SummaryFilters) => {
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-  // total + high severity + verified counts
   const totalsSql = `
     SELECT
       COUNT(*)::int AS total_incidents,

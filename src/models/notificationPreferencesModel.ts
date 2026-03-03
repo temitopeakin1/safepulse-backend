@@ -14,11 +14,13 @@ const DEFAULTS = {
   report_status_updates: false,
 };
 
-export const getPreferences = async (userId: string): Promise<NotificationPreferences> => {
+export const getPreferences = async (
+  userId: string,
+): Promise<NotificationPreferences> => {
   const result = await pool.query(
     `SELECT user_id, email_notifications, critical_incidents_near_me, report_status_updates, updated_at
      FROM notification_preferences WHERE user_id = $1`,
-    [userId]
+    [userId],
   );
   if (result.rows[0]) {
     return result.rows[0];
@@ -31,7 +33,14 @@ export const getPreferences = async (userId: string): Promise<NotificationPrefer
 
 export const updatePreferences = async (
   userId: string,
-  data: Partial<Pick<NotificationPreferences, "email_notifications" | "critical_incidents_near_me" | "report_status_updates">>
+  data: Partial<
+    Pick<
+      NotificationPreferences,
+      | "email_notifications"
+      | "critical_incidents_near_me"
+      | "report_status_updates"
+    >
+  >,
 ): Promise<NotificationPreferences> => {
   const result = await pool.query(
     `INSERT INTO notification_preferences (user_id, email_notifications, critical_incidents_near_me, report_status_updates, updated_at)
@@ -47,7 +56,7 @@ export const updatePreferences = async (
       data.email_notifications,
       data.critical_incidents_near_me,
       data.report_status_updates,
-    ]
+    ],
   );
   return result.rows[0];
 };

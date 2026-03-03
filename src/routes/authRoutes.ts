@@ -98,7 +98,11 @@ router.get("/verify-email", verifyEmail);
  *       200:
  *         description: If account exists and not verified, new link sent (or already verified message)
  */
-router.post("/resend-verification-email", validateBody(forgotPasswordSchema), resendVerificationEmail);
+router.post(
+  "/resend-verification-email",
+  validateBody(forgotPasswordSchema),
+  resendVerificationEmail,
+);
 
 /**
  * @openapi
@@ -215,7 +219,11 @@ router.get("/current", validateToken, currentUser);
  *       200:
  *         description: If email exists, reset link has been sent (same response for security)
  */
-router.post("/forgot-password", validateBody(forgotPasswordSchema), forgotPassword);
+router.post(
+  "/forgot-password",
+  validateBody(forgotPasswordSchema),
+  forgotPassword,
+);
 
 /**
  * @openapi
@@ -240,7 +248,12 @@ router.post("/forgot-password", validateBody(forgotPasswordSchema), forgotPasswo
  *       400:
  *         description: Invalid or expired token / validation error
  */
-router.post("/reset-password", rateLimiter, validateBody(resetPasswordSchema), resetPassword);
+router.post(
+  "/reset-password",
+  rateLimiter,
+  validateBody(resetPasswordSchema),
+  resetPassword,
+);
 
 /**
  * @openapi
@@ -279,7 +292,12 @@ router.post("/reset-password", rateLimiter, validateBody(resetPasswordSchema), r
  *       409:
  *         description: Email or phone number already exists
  */
-router.patch("/update", validateToken, validateBody(updateProfileSchema), updateProfile);
+router.patch(
+  "/update",
+  validateToken,
+  validateBody(updateProfileSchema),
+  updateProfile,
+);
 
 /**
  * @openapi
@@ -319,7 +337,12 @@ router.get("/preferences", validateToken, getNotificationPreferences);
  *       401:
  *         description: Not authenticated
  */
-router.patch("/preferences", validateToken, validateBody(notificationPreferencesSchema), updateNotificationPreferences);
+router.patch(
+  "/preferences",
+  validateToken,
+  validateBody(notificationPreferencesSchema),
+  updateNotificationPreferences,
+);
 
 /**
  * @openapi
@@ -347,6 +370,11 @@ router.patch("/preferences", validateToken, validateBody(notificationPreferences
  *       401:
  *         description: Not authenticated
  */
-router.post("/change-password", validateToken, validateBody(changePasswordSchema), changePassword);
+router.post(
+  "/change-password",
+  validateToken,
+  validateBody(changePasswordSchema),
+  changePassword,
+);
 
 export default router;

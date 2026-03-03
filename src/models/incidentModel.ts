@@ -46,7 +46,9 @@ export interface ListIncidentsFilters {
   search?: string;
 }
 
-export const createIncident = async (input: CreateIncidentInput): Promise<Incident> => {
+export const createIncident = async (
+  input: CreateIncidentInput,
+): Promise<Incident> => {
   const evidenceJson =
     input.evidence && input.evidence.length > 0
       ? JSON.stringify(input.evidence)
@@ -65,13 +67,13 @@ export const createIncident = async (input: CreateIncidentInput): Promise<Incide
       input.longitude ?? null,
       input.severity,
       evidenceJson,
-    ]
+    ],
   );
   return result.rows[0];
 };
 
 export const findAllIncidents = async (
-  filters: ListIncidentsFilters
+  filters: ListIncidentsFilters,
 ): Promise<{ incidents: Incident[]; total: number }> => {
   const page = Math.max(1, filters.page ?? 1);
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
@@ -98,7 +100,7 @@ export const findAllIncidents = async (
   }
   if (filters.search) {
     conditions.push(
-      `(title ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR location ILIKE $${paramIndex})`
+      `(title ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR location ILIKE $${paramIndex})`,
     );
     params.push(`%${filters.search}%`);
     paramIndex++;
@@ -107,7 +109,7 @@ export const findAllIncidents = async (
   const whereClause = conditions.join(" AND ");
   const countResult = await pool.query(
     `SELECT COUNT(*)::int AS total FROM incidents WHERE ${whereClause}`,
-    params
+    params,
   );
   const total = countResult.rows[0].total;
 
@@ -116,18 +118,25 @@ export const findAllIncidents = async (
     `SELECT * FROM incidents WHERE ${whereClause}
      ORDER BY created_at DESC
      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-    params
+    params,
   );
 
   return { incidents: result.rows, total };
 };
 
-export const findIncidentById = async (id: number): Promise<Incident | null> => {
-  const result = await pool.query("SELECT * FROM incidents WHERE id = $1", [id]);
+export const findIncidentById = async (
+  id: number,
+): Promise<Incident | null> => {
+  const result = await pool.query("SELECT * FROM incidents WHERE id = $1", [
+    id,
+  ]);
   return result.rows[0] ?? null;
 };
 
-export const getMapMarkers = async (filters?: { severity?: Severity; location?: string }) => {
+export const getMapMarkers = async (filters?: {
+  severity?: Severity;
+  location?: string;
+}) => {
   const conditions: string[] = ["1=1"];
   const params: unknown[] = [];
   let paramIndex = 1;
@@ -145,24 +154,24 @@ export const getMapMarkers = async (filters?: { severity?: Severity; location?: 
     `SELECT id, incident_type, title, location, latitude, longitude, severity, status, created_at
      FROM incidents WHERE ${whereClause}
      ORDER BY created_at DESC`,
-    params
+    params,
   );
   return result.rows;
 };
 
 export const setIncidentVerified = async (
   id: number,
-  status: "verified" | "unverified"
+  status: "verified" | "unverified",
 ): Promise<Incident | null> => {
   const result = await pool.query(
     `UPDATE incidents SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
-    [status, id]
+    [status, id],
   );
   return result.rows[0] ?? null;
 };
 
 export const getIncidentsForExport = async (
-  filters: Omit<ListIncidentsFilters, "page" | "limit">
+  filters: Omit<ListIncidentsFilters, "page" | "limit">,
 ) => {
   const conditions: string[] = ["1=1"];
   const params: unknown[] = [];
@@ -184,7 +193,7 @@ export const getIncidentsForExport = async (
   }
   if (filters.search) {
     conditions.push(
-      `(title ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR location ILIKE $${paramIndex})`
+      `(title ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR location ILIKE $${paramIndex})`,
     );
     params.push(`%${filters.search}%`);
   }
@@ -193,7 +202,7 @@ export const getIncidentsForExport = async (
     `SELECT id, incident_type, title, location, severity, status, created_at
      FROM incidents WHERE ${whereClause}
      ORDER BY created_at DESC`,
-    params
+    params,
   );
   return result.rows;
 };

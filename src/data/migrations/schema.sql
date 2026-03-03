@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS kyc (
   government_id_type VARCHAR(50) NOT NULL,
   id_number VARCHAR(100) NOT NULL,
   id_front_url TEXT NOT NULL,
-  id_back_url TEXT NOT NULL,
+  id_back_url TEXT,
   selfie_url TEXT NOT NULL,
   phone_number VARCHAR(20) NOT NULL,
   phone_verified BOOLEAN DEFAULT false,

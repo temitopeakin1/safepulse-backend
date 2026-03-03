@@ -9,7 +9,10 @@ import {
 } from "../controllers/incidentController";
 import validateToken from "../middleware/validateTokenHandler";
 import { validateBody } from "../middleware/validateBody";
-import { createIncidentSchema, verifyIncidentSchema } from "../validators/incident";
+import {
+  createIncidentSchema,
+  verifyIncidentSchema,
+} from "../validators/incident";
 
 const router = express.Router();
 
@@ -53,7 +56,12 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized
  */
-router.post("/", validateToken, validateBody(createIncidentSchema), createIncident);
+router.post(
+  "/",
+  validateToken,
+  validateBody(createIncidentSchema),
+  createIncident,
+);
 
 /**
  * @openapi
@@ -183,6 +191,11 @@ router.get("/:id", getIncidentById);
  *       404:
  *         description: Incident not found
  */
-router.post("/:id/verify", validateToken, validateBody(verifyIncidentSchema), verifyIncident);
+router.post(
+  "/:id/verify",
+  validateToken,
+  validateBody(verifyIncidentSchema),
+  verifyIncident,
+);
 
 export default router;

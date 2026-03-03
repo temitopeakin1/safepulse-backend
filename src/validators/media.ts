@@ -12,7 +12,7 @@ export const mediaString = z
       v.startsWith("http://") ||
       v.startsWith("https://") ||
       v.startsWith("data:"),
-    "Media must be a URL (http/https) or a data URI (base64)"
+    "Media must be a URL (http/https) or a data URI (base64)",
   );
 
 /** Optional media string (URL or base64). Use when the field can be omitted. */

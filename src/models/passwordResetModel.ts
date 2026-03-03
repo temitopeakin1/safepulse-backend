@@ -3,7 +3,7 @@ import pool from "../config/db";
 export const createResetToken = async (
   userId: string,
   tokenHash: string,
-  expiresAt: Date
+  expiresAt: Date,
 ) => {
   // Reuse one existing row for this user to avoid violating uniq_active_reset_token
   const updated = await pool.query(
@@ -16,7 +16,7 @@ export const createResetToken = async (
        LIMIT 1
      )
      RETURNING id, user_id, expires_at, created_at`,
-    [userId, tokenHash, expiresAt]
+    [userId, tokenHash, expiresAt],
   );
   if (updated.rowCount && updated.rowCount > 0) {
     return updated.rows[0];
@@ -25,7 +25,7 @@ export const createResetToken = async (
     `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
      VALUES ($1, $2, $3)
      RETURNING id, user_id, expires_at, created_at`,
-    [userId, tokenHash, expiresAt]
+    [userId, tokenHash, expiresAt],
   );
   return result.rows[0];
 };
@@ -37,7 +37,7 @@ export const findValidResetToken = async (tokenHash: string) => {
        AND used_at IS NULL
        AND expires_at > NOW()
      LIMIT 1`,
-    [tokenHash]
+    [tokenHash],
   );
   return result.rows[0];
 };
@@ -45,7 +45,7 @@ export const findValidResetToken = async (tokenHash: string) => {
 export const markTokenUsed = async (tokenId: string) => {
   await pool.query(
     `UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1`,
-    [tokenId]
+    [tokenId],
   );
 };
 
@@ -54,6 +54,6 @@ export const invalidateUserTokens = async (userId: string) => {
     `UPDATE password_reset_tokens
      SET used_at = NOW()
      WHERE user_id = $1 AND used_at IS NULL`,
-    [userId]
+    [userId],
   );
 };

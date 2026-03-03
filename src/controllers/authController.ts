@@ -8,7 +8,7 @@ import * as PasswordResetModel from "../models/passwordResetModel";
 import * as EmailVerificationModel from "../models/emailVerificationModel";
 import crypto from "crypto";
 import * as NotificationPreferencesModel from "../models/notificationPreferencesModel";
-import { sendVerificationEmail } from "../utils/email";
+import { sendVerificationEmail, sendResetPasswordEmail } from "../utils/email";
 import type {
   RegisterInput,
   LoginInput,
@@ -21,7 +21,8 @@ import type {
 
 // Register user (body validated by validateBody(registerSchema) in route)
 const registerUser = asyncHandler(async (req: Request, res: Response) => {
-  const { firstName, lastName, phoneNumber, email, password } = req.validated as RegisterInput;
+  const { firstName, lastName, phoneNumber, email, password } =
+    req.validated as RegisterInput;
 
   const existingByEmail = await UserModel.findUserByEmail(email);
   if (existingByEmail) {
@@ -44,7 +45,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id, first_name, last_name, phone_number, email, created_at
       `,
-      [firstName, lastName, phoneNumber, email, hashedPassword]
+      [firstName, lastName, phoneNumber, email, hashedPassword],
     );
 
     const newUser = result.rows[0];
@@ -54,18 +55,33 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    await EmailVerificationModel.createVerificationToken(userId, tokenHash, expiresAt);
+    await EmailVerificationModel.createVerificationToken(
+      userId,
+      tokenHash,
+      expiresAt,
+    );
 
     const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
     const verificationLink = `${clientUrl}/verify-email?token=${token}`;
-    await sendVerificationEmail(newUser.email, verificationLink, newUser.first_name);
+    await sendVerificationEmail(
+      newUser.email,
+      verificationLink,
+      newUser.first_name,
+    );
     if (process.env.NODE_ENV !== "production") {
       console.log("[EMAIL VERIFICATION LINK]", verificationLink);
     }
 
-    const payload: { status: number; message: string; user: object; verificationLink?: string; token?: string } = {
+    const payload: {
+      status: number;
+      message: string;
+      user: object;
+      verificationLink?: string;
+      token?: string;
+    } = {
       status: 201,
-      message: "Please verify your email. Check your inbox for the verification link.",
+      message:
+        "Please verify your email. Check your inbox for the verification link.",
       user: {
         id: newUser.id,
         firstName: newUser.first_name,
@@ -137,14 +153,14 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
       lastName: user.last_name,
     },
     process.env.ACCESS_TOKEN_SECRET as string,
-    { expiresIn: "20m" }
+    { expiresIn: "20m" },
   );
 
   // refresh token
   const refreshToken = jwt.sign(
     { id: user.id },
     process.env.REFRESH_TOKEN_SECRET as string,
-    { expiresIn: "7d" }
+    { expiresIn: "7d" },
   );
 
   // store refresh token in DB
@@ -175,10 +191,13 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
     throw new Error("Verification token is required");
   }
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  const record = await EmailVerificationModel.findValidVerificationToken(tokenHash);
+  const record =
+    await EmailVerificationModel.findValidVerificationToken(tokenHash);
   if (!record) {
     res.status(400);
-    throw new Error("Invalid or expired verification link. Please request a new one.");
+    throw new Error(
+      "Invalid or expired verification link. Please request a new one.",
+    );
   }
   await EmailVerificationModel.markEmailVerifiedAndDeleteToken(record.user_id);
   res.status(200).json({
@@ -188,44 +207,61 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 });
 
 // POST /api/v1/auth/resend-verification-email — resend verification link
-const resendVerificationEmail = asyncHandler(async (req: Request, res: Response) => {
-  const { email } = req.validated as ForgotPasswordInput;
-  const user = await UserModel.findUserByEmail(email);
-  if (!user) {
-    res.status(200).json({
+const resendVerificationEmail = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { email } = req.validated as ForgotPasswordInput;
+    const user = await UserModel.findUserByEmail(email);
+    if (!user) {
+      res.status(200).json({
+        success: true,
+        message:
+          "If an account exists with this email, a new verification link has been sent.",
+      });
+      return;
+    }
+    if ((user as any).email_verified) {
+      res.status(200).json({
+        success: true,
+        message: "Email is already verified. You can log in.",
+      });
+      return;
+    }
+    await EmailVerificationModel.invalidateVerificationTokens(user.id);
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await EmailVerificationModel.createVerificationToken(
+      user.id,
+      tokenHash,
+      expiresAt,
+    );
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+    const verificationLink = `${clientUrl}/verify-email?token=${token}`;
+    await sendVerificationEmail(
+      (user as any).email,
+      verificationLink,
+      (user as any).first_name,
+    );
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[EMAIL VERIFICATION LINK]", verificationLink);
+    }
+    const payload: {
+      success: boolean;
+      message: string;
+      verificationLink?: string;
+      token?: string;
+    } = {
       success: true,
-      message: "If an account exists with this email, a new verification link has been sent.",
-    });
-    return;
-  }
-  if ((user as any).email_verified) {
-    res.status(200).json({
-      success: true,
-      message: "Email is already verified. You can log in.",
-    });
-    return;
-  }
-  await EmailVerificationModel.invalidateVerificationTokens(user.id);
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await EmailVerificationModel.createVerificationToken(user.id, tokenHash, expiresAt);
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
-  const verificationLink = `${clientUrl}/verify-email?token=${token}`;
-  await sendVerificationEmail((user as any).email, verificationLink, (user as any).first_name);
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[EMAIL VERIFICATION LINK]", verificationLink);
-  }
-  const payload: { success: boolean; message: string; verificationLink?: string; token?: string } = {
-    success: true,
-    message: "If an account exists with this email, a new verification link has been sent.",
-  };
-  if (process.env.NODE_ENV !== "production") {
-    payload.verificationLink = verificationLink;
-    payload.token = token;
-  }
-  res.status(200).json(payload);
-});
+      message:
+        "If an account exists with this email, a new verification link has been sent.",
+    };
+    if (process.env.NODE_ENV !== "production") {
+      payload.verificationLink = verificationLink;
+      payload.token = token;
+    }
+    res.status(200).json(payload);
+  },
+);
 
 // forget password endpoint (body validated by validateBody(forgotPasswordSchema) in route)
 const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
@@ -253,9 +289,26 @@ const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
   const resetLink = `${clientUrl}/reset-password?token=${token}`;
 
+  const emailSent = await sendResetPasswordEmail(
+    (user as any).email,
+    resetLink,
+    (user as any).first_name,
+  );
+  if (!emailSent) {
+    console.warn(
+      "[RESET PASSWORD] Email could not be sent to",
+      (user as any).email,
+      "- check SMTP config and server logs above.",
+    );
+  }
   console.log("[RESET PASSWORD LINK]", resetLink);
 
-  const payload: { success: boolean; message: string; resetLink?: string; token?: string } = {
+  const payload: {
+    success: boolean;
+    message: string;
+    resetLink?: string;
+    token?: string;
+  } = {
     success: true,
     message: "If the email exists, a reset link has been sent.",
   };
@@ -285,7 +338,7 @@ const resetPassword = asyncHandler(async (req: Request, res: Response) => {
 
   await pool.query(
     "UPDATE users SET password = $1, refresh_token = NULL WHERE id = $2",
-    [hashedPassword, record.user_id]
+    [hashedPassword, record.user_id],
   );
 
   await PasswordResetModel.markTokenUsed(record.id);
@@ -303,7 +356,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   if (refreshToken) {
     await pool.query(
       "UPDATE users SET refresh_token = NULL WHERE refresh_token = $1",
-      [refreshToken]
+      [refreshToken],
     );
   }
 
@@ -332,7 +385,7 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
   // find user with this refresh token
   const result = await pool.query(
     "SELECT * FROM users WHERE refresh_token = $1",
-    [refreshToken]
+    [refreshToken],
   );
 
   const user = result.rows[0];
@@ -352,7 +405,7 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
   const newAccessToken = jwt.sign(
     { id: user.id, email: user.email, username: user.username },
     process.env.ACCESS_TOKEN_SECRET as string,
-    { expiresIn: "15m" }
+    { expiresIn: "15m" },
   );
 
   res.status(200).json({
@@ -391,7 +444,9 @@ const updateProfile = asyncHandler(async (req: Request, res: Response) => {
     }
   }
   if (body.phoneNumber) {
-    const existingByPhone = await UserModel.findUserByPhoneNumber(body.phoneNumber);
+    const existingByPhone = await UserModel.findUserByPhoneNumber(
+      body.phoneNumber,
+    );
     if (existingByPhone && existingByPhone.id !== userId) {
       res.status(409);
       throw new Error("Phone number already exists");
@@ -425,46 +480,53 @@ const updateProfile = asyncHandler(async (req: Request, res: Response) => {
 });
 
 // GET /api/v1/auth/preferences — get notification preferences (Profile - Notification Preferences)
-const getNotificationPreferences = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    res.status(401);
-    throw new Error("Not authenticated");
-  }
-  const userId = (req.user as any).id;
-  const prefs = await NotificationPreferencesModel.getPreferences(userId);
-  res.status(200).json({
-    success: true,
-    preferences: {
-      emailNotifications: prefs.email_notifications,
-      criticalIncidentsNearMe: prefs.critical_incidents_near_me,
-      reportStatusUpdates: prefs.report_status_updates,
-    },
-  });
-});
+const getNotificationPreferences = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      res.status(401);
+      throw new Error("Not authenticated");
+    }
+    const userId = (req.user as any).id;
+    const prefs = await NotificationPreferencesModel.getPreferences(userId);
+    res.status(200).json({
+      success: true,
+      preferences: {
+        emailNotifications: prefs.email_notifications,
+        criticalIncidentsNearMe: prefs.critical_incidents_near_me,
+        reportStatusUpdates: prefs.report_status_updates,
+      },
+    });
+  },
+);
 
 // PATCH /api/v1/auth/preferences — update notification preferences (Profile - Edit)
-const updateNotificationPreferences = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    res.status(401);
-    throw new Error("Not authenticated");
-  }
-  const userId = (req.user as any).id;
-  const body = req.validated as NotificationPreferencesInput;
-  const updated = await NotificationPreferencesModel.updatePreferences(userId, {
-    email_notifications: body.emailNotifications,
-    critical_incidents_near_me: body.criticalIncidentsNearMe,
-    report_status_updates: body.reportStatusUpdates,
-  });
-  res.status(200).json({
-    success: true,
-    message: "Notification preferences updated",
-    preferences: {
-      emailNotifications: updated.email_notifications,
-      criticalIncidentsNearMe: updated.critical_incidents_near_me,
-      reportStatusUpdates: updated.report_status_updates,
-    },
-  });
-});
+const updateNotificationPreferences = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      res.status(401);
+      throw new Error("Not authenticated");
+    }
+    const userId = (req.user as any).id;
+    const body = req.validated as NotificationPreferencesInput;
+    const updated = await NotificationPreferencesModel.updatePreferences(
+      userId,
+      {
+        email_notifications: body.emailNotifications,
+        critical_incidents_near_me: body.criticalIncidentsNearMe,
+        report_status_updates: body.reportStatusUpdates,
+      },
+    );
+    res.status(200).json({
+      success: true,
+      message: "Notification preferences updated",
+      preferences: {
+        emailNotifications: updated.email_notifications,
+        criticalIncidentsNearMe: updated.critical_incidents_near_me,
+        reportStatusUpdates: updated.report_status_updates,
+      },
+    });
+  },
+);
 
 // POST /api/v1/auth/change-password — change password (Profile - Security)
 const changePassword = asyncHandler(async (req: Request, res: Response) => {
@@ -479,7 +541,10 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
     res.status(401);
     throw new Error("User not found");
   }
-  const currentMatch = await bcrypt.compare(body.currentPassword, user.password);
+  const currentMatch = await bcrypt.compare(
+    body.currentPassword,
+    user.password,
+  );
   if (!currentMatch) {
     res.status(400);
     throw new Error("Current password is incorrect");

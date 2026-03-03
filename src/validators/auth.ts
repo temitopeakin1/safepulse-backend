@@ -5,12 +5,21 @@ const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")
   .refine((val) => !/\s/.test(val), "Password must not contain spaces")
-  .refine((val) => /[a-z]/.test(val), "Password must include at least one lowercase letter")
-  .refine((val) => /[A-Z]/.test(val), "Password must include at least one uppercase letter")
-  .refine((val) => /[0-9]/.test(val), "Password must include at least one number")
+  .refine(
+    (val) => /[a-z]/.test(val),
+    "Password must include at least one lowercase letter",
+  )
+  .refine(
+    (val) => /[A-Z]/.test(val),
+    "Password must include at least one uppercase letter",
+  )
+  .refine(
+    (val) => /[0-9]/.test(val),
+    "Password must include at least one number",
+  )
   .refine(
     (val) => /[^A-Za-z0-9]/.test(val),
-    "Password must include at least one special character"
+    "Password must include at least one special character",
   );
 
 export const loginSchema = z
@@ -60,7 +69,8 @@ export const updateProfileSchema = z
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field (firstName, lastName, phoneNumber, email) is required",
+    message:
+      "At least one field (firstName, lastName, phoneNumber, email) is required",
   });
 
 export const notificationPreferencesSchema = z
@@ -71,7 +81,8 @@ export const notificationPreferencesSchema = z
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one preference (emailNotifications, criticalIncidentsNearMe, reportStatusUpdates) is required",
+    message:
+      "At least one preference (emailNotifications, criticalIncidentsNearMe, reportStatusUpdates) is required",
   });
 
 export const changePasswordSchema = z
@@ -90,5 +101,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
-export type NotificationPreferencesInput = z.infer<typeof notificationPreferencesSchema>;
+export type NotificationPreferencesInput = z.infer<
+  typeof notificationPreferencesSchema
+>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

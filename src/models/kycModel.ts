@@ -7,7 +7,8 @@ export interface KYC {
   government_id_type: string;
   id_number: string;
   id_front_url: string;
-  id_back_url: string;
+  /** Optional for single-sided IDs (e.g. passport). */
+  id_back_url: string | null;
   selfie_url: string;
   phone_number: string;
   phone_verified?: boolean;
@@ -31,13 +32,15 @@ export const createKYC = async (kyc: KYC) => {
       kyc.id_front_url,
       kyc.id_back_url,
       kyc.selfie_url,
-      kyc.phone_number
-    ]
+      kyc.phone_number,
+    ],
   );
   return result.rows[0];
 };
 
 export const getKYCByUserId = async (userId: string) => {
-  const result = await pool.query(`SELECT * FROM kyc WHERE user_id = $1`, [userId]);
+  const result = await pool.query(`SELECT * FROM kyc WHERE user_id = $1`, [
+    userId,
+  ]);
   return result.rows[0];
 };
