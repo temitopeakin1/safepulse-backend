@@ -64,3 +64,40 @@ export const uploadKycBuffer = async (
 };
 
 export const KYC_MAX_FILE_SIZE = MAX_KYC_FILE_BYTES;
+
+/** Max size per evidence file (images + short video). 50MB to allow MP4. */
+export const EVIDENCE_MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Upload an evidence file buffer (image or video) to Cloudinary.
+ * Used for incident evidence: PNG, SVG, JPG, MP4.
+ */
+export const uploadEvidenceBuffer = async (
+  buffer: Buffer,
+  folder: string,
+  options?: { resource_type?: "image" | "video" | "auto" },
+): Promise<{ url: string; publicId: string }> => {
+  requireCloudinaryConfig();
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: options?.resource_type ?? "auto",
+        max_bytes: EVIDENCE_MAX_FILE_BYTES,
+      },
+      (err, result) => {
+        if (err) {
+          reject(new Error(err.message || "Upload failed"));
+          return;
+        }
+        if (!result?.secure_url) {
+          reject(new Error("No URL returned from upload"));
+          return;
+        }
+        resolve({ url: result.secure_url, publicId: result.public_id ?? "" });
+      },
+    );
+    const readStream = Readable.from(buffer);
+    readStream.pipe(stream);
+  });
+};

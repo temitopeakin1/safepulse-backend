@@ -8,6 +8,7 @@ import {
   listIncidentsQuerySchema,
 } from "../validators/incident";
 import { formatZodError } from "../utils/validate";
+import { uploadEvidenceBuffer } from "../utils/uploadToCloud";
 
 const timeAgo = (date: Date) => {
   const diffMs = Date.now() - new Date(date).getTime();
@@ -49,6 +50,43 @@ const toIncidentResponse = (row: any) => ({
   created_at: row.created_at,
   timeAgo: timeAgo(row.created_at),
 });
+
+// POST /api/incidents/evidence/upload — upload evidence files; returns URLs for use in createIncident
+export const uploadIncidentEvidence = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      res.status(401);
+      throw new Error("Unauthorized");
+    }
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (!files?.length) {
+      res.status(400);
+      throw new Error(
+        "No files uploaded. Send one or more files (SVG, PNG, JPG, MP4) using field 'evidence'.",
+      );
+    }
+    const userId = (req.user as any).id;
+    const folder = `incidents/evidence/${userId}`;
+    const evidence: {
+      file_url: string;
+      file_name?: string;
+      file_type?: string;
+    }[] = [];
+    for (const file of files) {
+      const ext = file.originalname?.split(".").pop()?.toLowerCase() ?? "";
+      const { url } = await uploadEvidenceBuffer(file.buffer, folder);
+      evidence.push({
+        file_url: url,
+        file_name: file.originalname || undefined,
+        file_type: ext || undefined,
+      });
+    }
+    res.status(200).json({
+      success: true,
+      evidence,
+    });
+  },
+);
 
 // POST /api/incidents — create/report incident (Report Incidents in sidebar)
 export const createIncident = asyncHandler(

@@ -137,7 +137,11 @@ export const getMapMarkers = async (filters?: {
   severity?: Severity;
   location?: string;
 }) => {
-  const conditions: string[] = ["1=1"];
+  const conditions: string[] = [
+    "1=1",
+    "latitude IS NOT NULL",
+    "longitude IS NOT NULL",
+  ];
   const params: unknown[] = [];
   let paramIndex = 1;
   if (filters?.severity) {

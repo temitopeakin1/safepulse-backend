@@ -6,9 +6,11 @@ import {
   getMapMarkers,
   verifyIncident,
   exportIncidents,
+  uploadIncidentEvidence,
 } from "../controllers/incidentController";
 import validateToken from "../middleware/validateTokenHandler";
 import { validateBody } from "../middleware/validateBody";
+import { uploadIncidentEvidence as uploadEvidenceMiddleware } from "../middleware/uploadIncidentEvidence";
 import {
   createIncidentSchema,
   verifyIncidentSchema,
@@ -61,6 +63,38 @@ router.post(
   validateToken,
   validateBody(createIncidentSchema),
   createIncident,
+);
+
+/**
+ * @openapi
+ * /api/v1/incidents/evidence/upload:
+ *   post:
+ *     tags: [Incidents]
+ *     summary: Upload incident evidence files (images/video)
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               evidence:
+ *                 type: array
+ *                 items: { type: string, format: binary }
+ *                 description: One or more files (SVG, PNG, JPG, MP4), max 10 files, 50MB each
+ *     responses:
+ *       200:
+ *         description: Returns evidence array with file_url, file_name, file_type for each file (use in POST /incidents body)
+ *       400:
+ *         description: No files or invalid type
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  "/evidence/upload",
+  validateToken,
+  uploadEvidenceMiddleware.array("evidence", 10),
+  uploadIncidentEvidence,
 );
 
 /**
