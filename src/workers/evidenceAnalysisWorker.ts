@@ -8,26 +8,33 @@ import {
 
 let workerRef: Worker<EvidenceAnalysisJobData> | null = null;
 
-export const startEvidenceAnalysisWorker = (): Worker<EvidenceAnalysisJobData> | null => {
-  if (!isRedisConfigured()) {
-    console.warn("Evidence analysis worker disabled: REDIS_URL missing");
-    return null;
-  }
-  if (workerRef) return workerRef;
+export const startEvidenceAnalysisWorker =
+  (): Worker<EvidenceAnalysisJobData> | null => {
+    if (!isRedisConfigured()) {
+      console.warn("Evidence analysis worker disabled: REDIS_URL missing");
+      return null;
+    }
+    if (workerRef) return workerRef;
 
-  workerRef = new Worker<EvidenceAnalysisJobData>(
-    EVIDENCE_ANALYSIS_QUEUE,
-    async (job) => processEvidenceAnalysisJob(job),
-    {
-      connection: getRedisConnection(),
-      concurrency: 3,
-    },
-  );
+    workerRef = new Worker<EvidenceAnalysisJobData>(
+      EVIDENCE_ANALYSIS_QUEUE,
+      async (job) => processEvidenceAnalysisJob(job),
+      {
+        connection: getRedisConnection(),
+        concurrency: 3,
+      },
+    );
 
-  workerRef.on("failed", (job, err) => {
-    console.error(`Evidence analysis job failed (${job?.id}):`, err);
-  });
+    workerRef.on("failed", (job, err) => {
+      console.error(`Evidence analysis job failed (${job?.id}):`, err);
+    });
 
-  return workerRef;
-};
+    workerRef.on("error", (err) => {
+      console.error(
+        "Evidence analysis worker (Redis) error — is Redis running on REDIS_URL?",
+        err instanceof Error ? err.message : err,
+      );
+    });
 
+    return workerRef;
+  };

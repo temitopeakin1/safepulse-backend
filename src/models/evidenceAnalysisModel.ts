@@ -1,7 +1,15 @@
 import pool from "../config/db";
-import { EvidenceItem, ScreeningResult, setIncidentScreening } from "./incidentModel";
+import {
+  EvidenceItem,
+  ScreeningResult,
+  setIncidentScreening,
+} from "./incidentModel";
 
-export type EvidenceAnalysisStatus = "pending" | "complete" | "error" | "skipped";
+export type EvidenceAnalysisStatus =
+  | "pending"
+  | "complete"
+  | "error"
+  | "skipped";
 
 export interface EvidenceAnalysisRow {
   id: number;
@@ -92,7 +100,11 @@ export const computeAndPersistIncidentScreening = async (
   }>;
 
   if (!rows.length) {
-    await setIncidentScreening(incidentId, "pending", "No evidence analysis rows found");
+    await setIncidentScreening(
+      incidentId,
+      "pending",
+      "No evidence analysis rows found",
+    );
     return "pending";
   }
 
@@ -115,4 +127,3 @@ export const computeAndPersistIncidentScreening = async (
   await setIncidentScreening(incidentId, screening, noteParts.join("; "));
   return screening;
 };
-

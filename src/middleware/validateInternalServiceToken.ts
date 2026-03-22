@@ -21,4 +21,3 @@ const validateInternalServiceToken = (
 };
 
 export default validateInternalServiceToken;
-

@@ -26,7 +26,10 @@ const evidenceItemSchema = z.object({
         allowedEvidenceTypes.includes(
           val.toLowerCase() as (typeof allowedEvidenceTypes)[number],
         ),
-      { message: "Evidence file_type must be one of: PNG, SVG, JPG, MP4, MP3, WAV, M4A, PDF" },
+      {
+        message:
+          "Evidence file_type must be one of: PNG, SVG, JPG, MP4, MP3, WAV, M4A, PDF",
+      },
     ),
 });
 
@@ -45,7 +48,8 @@ export const createIncidentSchema = z
   .strict()
   .refine(
     (data) =>
-      (data.evidence && data.evidence.length > 0) || (data.witness_count ?? 0) >= 1,
+      (data.evidence && data.evidence.length > 0) ||
+      (data.witness_count ?? 0) >= 1,
     {
       message:
         "Unverified claim — please add at least one of: photo, video, audio, document, or witness count.",

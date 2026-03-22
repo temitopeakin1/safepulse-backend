@@ -71,7 +71,8 @@ export const processEvidenceAnalysisJob = async (
       rawResponse: result.rawResponse,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown analysis error";
+    const message =
+      error instanceof Error ? error.message : "Unknown analysis error";
     await EvidenceAnalysisModel.markAnalysisResult({
       incidentId,
       fileUrl,
@@ -82,4 +83,3 @@ export const processEvidenceAnalysisJob = async (
 
   await EvidenceAnalysisModel.computeAndPersistIncidentScreening(incidentId);
 };
-

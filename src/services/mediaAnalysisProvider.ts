@@ -47,4 +47,3 @@ export const analyzeMediaByUrl = async (
     rawResponse: data,
   };
 };
-

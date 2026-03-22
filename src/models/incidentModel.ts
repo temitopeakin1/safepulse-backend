@@ -71,13 +71,14 @@ export const createIncident = async (
       : "[]";
   const witnessCount = Math.max(0, input.witness_count ?? 0);
   const hasEvidence =
-    input.evidence && Array.isArray(input.evidence) && input.evidence.length > 0;
+    input.evidence &&
+    Array.isArray(input.evidence) &&
+    input.evidence.length > 0;
   const hasSupport = hasEvidence || witnessCount >= 1;
   const initialStatus: IncidentStatus = hasSupport
     ? "under_review"
     : "unverified";
-  const publicTitle =
-    `Reported ${input.incident_type} in ${input.location} — ${initialStatus}`;
+  const publicTitle = `Reported ${input.incident_type} in ${input.location} — ${initialStatus}`;
   const trustLevel = input.reporter_trust_level_at_submission ?? null;
   const result = await pool.query(
     `INSERT INTO incidents (user_id, incident_type, title, description, location, latitude, longitude, severity, evidence, status, witness_count, public_title, public_description, reporter_trust_level_at_submission)

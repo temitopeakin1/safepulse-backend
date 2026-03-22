@@ -293,7 +293,11 @@ router.patch(
   setIncidentScreening,
 );
 
-router.get("/:id/evidence-analysis", validateToken, getIncidentEvidenceAnalysis);
+router.get(
+  "/:id/evidence-analysis",
+  validateToken,
+  getIncidentEvidenceAnalysis,
+);
 
 /**
  * @openapi

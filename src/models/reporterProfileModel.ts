@@ -36,7 +36,9 @@ export const isBlockedFromReporting = async (
   return row.rows[0]?.blocked_from_reporting === true;
 };
 
-export const getTrustLevel = async (userId: string): Promise<ReporterTrustLevel> => {
+export const getTrustLevel = async (
+  userId: string,
+): Promise<ReporterTrustLevel> => {
   const profile = await getOrCreateReporterProfile(userId);
   return (profile.reporter_trust_level as ReporterTrustLevel) ?? 1;
 };

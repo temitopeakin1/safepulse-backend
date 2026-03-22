@@ -46,10 +46,13 @@ const derivePublicTitle = (row: any) =>
   `Reported ${row.incident_type} in ${row.location} — ${row.status}`;
 
 const buildReviewHistory = (row: any) => {
-  const evidence = parseEvidence(row.evidence);
-  const history: { stage: string; result?: string; at?: string; by?: string; notes?: string }[] = [
-    { stage: "submission", at: row.created_at },
-  ];
+  const history: {
+    stage: string;
+    result?: string;
+    at?: string;
+    by?: string;
+    notes?: string;
+  }[] = [{ stage: "submission", at: row.created_at }];
   if (row.ai_screened_at) {
     history.push({
       stage: "ai_screening",
@@ -76,7 +79,9 @@ const toIncidentResponse = (
 ) => {
   const usePublic = options?.usePublicDisplay === true;
   const title = usePublic ? derivePublicTitle(row) : row.title;
-  const description = usePublic ? row.public_description ?? null : row.description;
+  const description = usePublic
+    ? (row.public_description ?? null)
+    : row.description;
   const evidence = parseEvidence(row.evidence);
   return {
     id: row.id,
@@ -158,8 +163,7 @@ export const createIncident = asyncHandler(
       );
     }
     await ReporterProfileModel.getOrCreateReporterProfile(userId);
-    const trustLevel =
-      await ReporterProfileModel.getTrustLevel(userId);
+    const trustLevel = await ReporterProfileModel.getTrustLevel(userId);
     const incident = await IncidentModel.createIncident({
       user_id: userId,
       incident_type: body.incident_type,
@@ -245,8 +249,7 @@ export const getIncidentById = asyncHandler(
       res.status(404);
       throw new Error("Incident not found");
     }
-    const confirmationCount =
-      await IncidentModel.getConfirmationCount(id);
+    const confirmationCount = await IncidentModel.getConfirmationCount(id);
     const validations =
       await IncidentValidationModel.getValidationsForIncident(id);
     const incidentResponse = toIncidentResponse(incident, {
@@ -273,9 +276,7 @@ export const getMapMarkers = asyncHandler(
     const severity = req.query.severity as string | undefined;
     const location = req.query.location as string | undefined;
     const scope =
-      req.query.scope === "public"
-        ? ("public" as const)
-        : ("all" as const);
+      req.query.scope === "public" ? ("public" as const) : ("all" as const);
     const validSeverity =
       severity && ["critical", "high", "medium", "low"].includes(severity)
         ? (severity as IncidentModel.Severity)
@@ -292,7 +293,8 @@ export const getMapMarkers = asyncHandler(
         id: m.id,
         incident_type: m.incident_type,
         title: usePublicDisplay
-          ? (m.public_title ?? `Reported ${m.incident_type} in ${m.location} — ${m.status}`)
+          ? (m.public_title ??
+            `Reported ${m.incident_type} in ${m.location} — ${m.status}`)
           : m.title,
         location: m.location,
         latitude: m.latitude,
@@ -326,7 +328,8 @@ export const validateIncident = asyncHandler(
     const userId = (req.user as any).id;
     const validation = await IncidentValidationModel.addValidation({
       incident_id: id,
-      validator_type: body.validator_type as IncidentValidationModel.ValidatorType,
+      validator_type:
+        body.validator_type as IncidentValidationModel.ValidatorType,
       validator_id: body.validator_id ?? userId,
       validator_name: body.validator_name,
     });
@@ -445,7 +448,11 @@ export const verifyIncident = asyncHandler(
         : body.status === "unverified" && body.rejection_reason
           ? { rejection_reason: body.rejection_reason }
           : undefined;
-    const incident = await IncidentModel.setIncidentStatus(id, body.status, options);
+    const incident = await IncidentModel.setIncidentStatus(
+      id,
+      body.status,
+      options,
+    );
     if (!incident) {
       res.status(404);
       throw new Error("Incident not found");
@@ -461,8 +468,9 @@ export const verifyIncident = asyncHandler(
       incident.user_id
     ) {
       await ReporterProfileModel.getOrCreateReporterProfile(incident.user_id);
-      const { blocked } =
-        await ReporterProfileModel.recordRejectedReport(incident.user_id);
+      const { blocked } = await ReporterProfileModel.recordRejectedReport(
+        incident.user_id,
+      );
       if (blocked) {
         message =
           "Incident unverified. Reporter has been blocked from submitting further reports due to repeated rejections.";
@@ -484,9 +492,7 @@ export const exportIncidents = asyncHandler(
     const location = req.query.location as string | undefined;
     const search = req.query.search as string | undefined;
     const scope =
-      req.query.scope === "public"
-        ? ("public" as const)
-        : ("all" as const);
+      req.query.scope === "public" ? ("public" as const) : ("all" as const);
     const format = (req.query.format as string) || "json";
     const validSeverity =
       severity && ["critical", "high", "medium", "low"].includes(severity)
@@ -504,15 +510,16 @@ export const exportIncidents = asyncHandler(
     const usePublicDisplay = scope === "public";
     const titleFor = (r: any) =>
       usePublicDisplay
-        ? (r.public_title ?? `Reported ${r.incident_type} in ${r.location} — ${r.status}`)
-        : (r.title || "");
+        ? (r.public_title ??
+          `Reported ${r.incident_type} in ${r.location} — ${r.status}`)
+        : r.title || "";
 
     if (format === "csv") {
       const header =
         "id,incident_type,title,location,severity,status,created_at\n";
       const csvRows = rows.map(
         (r: any) =>
-          `${r.id},"${(r.incident_type || "").replace(/"/g, '""')}","${(titleFor(r)).replace(/"/g, '""')}","${(r.location || "").replace(/"/g, '""')}",${r.severity},${r.status},${r.created_at}`,
+          `${r.id},"${(r.incident_type || "").replace(/"/g, '""')}","${titleFor(r).replace(/"/g, '""')}","${(r.location || "").replace(/"/g, '""')}",${r.severity},${r.status},${r.created_at}`,
       );
       res.setHeader("Content-Type", "text/csv");
       res.setHeader(
