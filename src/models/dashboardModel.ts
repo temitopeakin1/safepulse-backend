@@ -4,11 +4,16 @@ type SummaryFilters = {
   from?: string;
   to?: string;
   city?: string;
+  scope?: "public" | "all";
 };
 
 export const fetchDashboardSummary = async (filters: SummaryFilters) => {
   const where: string[] = [];
   const values: any[] = [];
+
+  if (filters.scope === "public") {
+    where.push(`status = 'verified'`);
+  }
 
   if (filters.from) {
     values.push(filters.from);
@@ -72,11 +77,16 @@ type ActivityFilters = {
   to?: string;
   city?: string;
   limit?: number;
+  scope?: "public" | "all";
 };
 
 export const fetchDashboardActivity = async (filters: ActivityFilters) => {
   const where: string[] = [];
   const values: any[] = [];
+
+  if (filters.scope === "public") {
+    where.push(`status = 'verified'`);
+  }
 
   if (filters.from) {
     values.push(filters.from);

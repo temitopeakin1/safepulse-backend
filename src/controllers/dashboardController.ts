@@ -16,16 +16,18 @@ const timeAgo = (date: Date) => {
 
 export const getDashboardSummary = asyncHandler(
   async (req: Request, res: Response) => {
-    const { from, to, city } = req.query as {
+    const { from, to, city, scope } = req.query as {
       from?: string;
       to?: string;
       city?: string;
+      scope?: "public" | "all";
     };
 
     const summary = await DashboardModel.fetchDashboardSummary({
       from,
       to,
       city,
+      scope,
     });
 
     res.status(200).json({ summary });
@@ -34,11 +36,12 @@ export const getDashboardSummary = asyncHandler(
 
 export const getDashboardActivity = asyncHandler(
   async (req: Request, res: Response) => {
-    const { from, to, city, limit } = req.query as {
+    const { from, to, city, limit, scope } = req.query as {
       from?: string;
       to?: string;
       city?: string;
       limit?: string;
+      scope?: "public" | "all";
     };
 
     const rows = await DashboardModel.fetchDashboardActivity({
@@ -46,6 +49,7 @@ export const getDashboardActivity = asyncHandler(
       to,
       city,
       limit: limit ? Number(limit) : 10,
+      scope,
     });
 
     const activity = rows.map((r: any) => ({

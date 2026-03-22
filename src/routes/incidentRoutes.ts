@@ -7,13 +7,20 @@ import {
   verifyIncident,
   exportIncidents,
   uploadIncidentEvidence,
+  setIncidentScreening,
+  confirmIncident,
+  validateIncident,
+  getIncidentEvidenceAnalysis,
 } from "../controllers/incidentController";
 import validateToken from "../middleware/validateTokenHandler";
 import { validateBody } from "../middleware/validateBody";
 import { uploadIncidentEvidence as uploadEvidenceMiddleware } from "../middleware/uploadIncidentEvidence";
+import validateInternalServiceToken from "../middleware/validateInternalServiceToken";
 import {
   createIncidentSchema,
   verifyIncidentSchema,
+  screeningIncidentSchema,
+  validateIncidentSchema,
 } from "../validators/incident";
 
 const router = express.Router();
@@ -42,14 +49,18 @@ const router = express.Router();
  *               severity: { type: string, enum: [critical, high, medium, low] }
  *               evidence:
  *                 type: array
- *                 description: Optional. Uploaded files (PNG, SVG, JPG, MP4). Send URLs after uploading to your storage.
+ *                 description: At least one of evidence or witness_count required. Uploaded files (PNG, SVG, JPG, MP4). Send URLs after uploading.
  *                 items:
  *                   type: object
  *                   required: [file_url]
  *                   properties:
  *                     file_url: { type: string, format: uri, description: "URL of uploaded file" }
  *                     file_name: { type: string }
- *                     file_type: { type: string, enum: [png, svg, jpg, jpeg, mp4] }
+ *                     file_type: { type: string, enum: [png, svg, jpg, jpeg, mp4, mp3, wav, m4a, pdf] }
+ *               witness_count:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: Number of witnesses (alternative to evidence; at least one of evidence or witness_count required)
  *     responses:
  *       201:
  *         description: Incident reported successfully
@@ -124,6 +135,10 @@ router.post(
  *         name: search
  *         schema: { type: string }
  *         description: Search in title, description, location
+ *       - in: query
+ *         name: scope
+ *         schema: { type: string, enum: [public, all], default: all }
+ *         description: "public = only verified incidents; all = all statuses (internal/admin)"
  *     responses:
  *       200:
  *         description: List of incidents with pagination
@@ -143,6 +158,9 @@ router.get("/", listIncidents);
  *       - in: query
  *         name: location
  *         schema: { type: string }
+ *       - in: query
+ *         name: scope
+ *         schema: { type: string, enum: [public, all], default: all }
  *     responses:
  *       200:
  *         description: Array of map markers (id, type, title, location, lat/lng, severity, status)
@@ -171,11 +189,111 @@ router.get("/map", getMapMarkers);
  *       - in: query
  *         name: search
  *         schema: { type: string }
+ *       - in: query
+ *         name: scope
+ *         schema: { type: string, enum: [public, all], default: all }
  *     responses:
  *       200:
  *         description: Exported incidents (JSON body or CSV download)
  */
 router.get("/export", exportIncidents);
+
+/**
+ * @openapi
+ * /api/v1/incidents/{id}/validate:
+ *   post:
+ *     tags: [Incidents]
+ *     summary: Record NGO/journalist validation (trusted roles)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [validator_type]
+ *             properties:
+ *               validator_type: { type: string, enum: [moderator, ngo, journalist, legal_observer] }
+ *               validator_id: { type: string }
+ *               validator_name: { type: string }
+ *     responses:
+ *       201:
+ *         description: Validation recorded
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Incident not found
+ */
+router.post(
+  "/:id/validate",
+  validateToken,
+  validateBody(validateIncidentSchema),
+  validateIncident,
+);
+
+/**
+ * @openapi
+ * /api/v1/incidents/{id}/confirm:
+ *   post:
+ *     tags: [Incidents]
+ *     summary: Confirm you witnessed this incident (crowd verification)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Confirmation recorded; returns confirmation_count
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Incident not found
+ */
+router.post("/:id/confirm", validateToken, confirmIncident);
+
+/**
+ * @openapi
+ * /api/v1/incidents/{id}/screening:
+ *   patch:
+ *     tags: [Incidents]
+ *     summary: Set AI screening result (internal/AI service)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [result]
+ *             properties:
+ *               result: { type: string, enum: [pending, passed, flagged] }
+ *               notes: { type: string }
+ *     responses:
+ *       200:
+ *         description: Screening result updated
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Incident not found
+ */
+router.patch(
+  "/:id/screening",
+  validateInternalServiceToken,
+  validateBody(screeningIncidentSchema),
+  setIncidentScreening,
+);
+
+router.get("/:id/evidence-analysis", validateToken, getIncidentEvidenceAnalysis);
 
 /**
  * @openapi
@@ -188,6 +306,10 @@ router.get("/export", exportIncidents);
  *         name: id
  *         required: true
  *         schema: { type: integer }
+ *       - in: query
+ *         name: scope
+ *         schema: { type: string, enum: [public, all], default: all }
+ *         description: "public = defamation-safe title/description only"
  *     responses:
  *       200:
  *         description: Incident details
@@ -216,7 +338,9 @@ router.get("/:id", getIncidentById);
  *             type: object
  *             required: [status]
  *             properties:
- *               status: { type: string, enum: [verified, unverified] }
+ *               status: { type: string, enum: [verified, unverified, under_review] }
+ *               review_notes: { type: string, description: "Optional moderator notes" }
+ *               rejection_reason: { type: string, description: "e.g. false_report, evidence_tampering when rejecting" }
  *     responses:
  *       200:
  *         description: Incident status updated

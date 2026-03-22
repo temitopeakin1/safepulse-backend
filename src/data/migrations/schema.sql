@@ -64,8 +64,19 @@ CREATE TABLE IF NOT EXISTS incidents (
   latitude DECIMAL(10, 8),
   longitude DECIMAL(11, 8),
   severity VARCHAR(20) NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low')),
-  status VARCHAR(20) NOT NULL DEFAULT 'unverified' CHECK (status IN ('verified', 'unverified')),
+  status VARCHAR(20) NOT NULL DEFAULT 'unverified' CHECK (status IN ('verified', 'unverified', 'under_review')),
   evidence JSONB DEFAULT '[]'::jsonb,
+  witness_count INTEGER NOT NULL DEFAULT 0,
+  public_title VARCHAR(255),
+  public_description TEXT,
+  reporter_trust_level_at_submission INTEGER,
+  rejection_reason TEXT,
+  ai_screened_at TIMESTAMP,
+  ai_screening_result VARCHAR(20),
+  ai_notes TEXT,
+  reviewed_at TIMESTAMP,
+  reviewed_by TEXT,
+  review_notes TEXT,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
@@ -74,6 +85,31 @@ CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
 CREATE INDEX IF NOT EXISTS idx_incidents_created_at ON incidents(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_incidents_location ON incidents(location);
+
+-- Per-evidence AI analysis results (deepfake/manipulation screening)
+CREATE TABLE IF NOT EXISTS incident_evidence_analysis (
+  id SERIAL PRIMARY KEY,
+  incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
+  file_url TEXT NOT NULL,
+  file_type VARCHAR(20),
+  provider VARCHAR(50) NOT NULL DEFAULT 'managed_api',
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'complete', 'error', 'skipped')),
+  score NUMERIC(6, 5),
+  labels JSONB,
+  raw_response JSONB,
+  error_message TEXT,
+  analyzed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_incident_evidence_analysis_incident_file
+  ON incident_evidence_analysis(incident_id, file_url);
+
+CREATE INDEX IF NOT EXISTS idx_incident_evidence_analysis_incident_id
+  ON incident_evidence_analysis(incident_id);
+
+CREATE INDEX IF NOT EXISTS idx_incident_evidence_analysis_status
+  ON incident_evidence_analysis(status);
 
 -- Notification preferences (Profile - Notification Preferences)
 CREATE TABLE IF NOT EXISTS notification_preferences (
