@@ -19,7 +19,7 @@ import type {
   ChangePasswordInput,
 } from "../validators/auth";
 
-// Register user 
+// Register user
 const registerUser = asyncHandler(async (req: Request, res: Response) => {
   const { firstName, lastName, phoneNumber, email, password } =
     req.validated as RegisterInput;
@@ -450,7 +450,8 @@ const currentUser = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("User not found");
   }
-  const resolvedProfilePicture = user.profile_picture ?? user.kyc_selfie_url ?? null;
+  const resolvedProfilePicture =
+    user.profile_picture ?? user.kyc_selfie_url ?? null;
 
   res.status(200).json({
     success: true,

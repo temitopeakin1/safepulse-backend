@@ -135,10 +135,10 @@ export const submitKYC = asyncHandler(async (req: Request, res: Response) => {
     }
 
     // Persist selfie as dashboard profile picture source-of-truth.
-    await pool.query(
-      "UPDATE users SET profile_picture = $1 WHERE id = $2",
-      [selfie.file_url, user_id],
-    );
+    await pool.query("UPDATE users SET profile_picture = $1 WHERE id = $2", [
+      selfie.file_url,
+      user_id,
+    ]);
 
     res.status(200).json({
       success: true,
