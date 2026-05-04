@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   password TEXT NOT NULL,
   email_verified BOOLEAN NOT NULL DEFAULT false,
   refresh_token TEXT,
+  profile_picture TEXT,
   last_login TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

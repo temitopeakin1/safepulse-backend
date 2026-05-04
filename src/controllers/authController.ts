@@ -19,7 +19,7 @@ import type {
   ChangePasswordInput,
 } from "../validators/auth";
 
-// Register user (body validated by validateBody(registerSchema) in route)
+// Register user 
 const registerUser = asyncHandler(async (req: Request, res: Response) => {
   const { firstName, lastName, phoneNumber, email, password } =
     req.validated as RegisterInput;
@@ -145,6 +145,7 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     res.status(500);
     throw new Error("JWT secret is not defined");
   }
+
   const accessToken = jwt.sign(
     {
       id: user.id,
@@ -420,10 +421,51 @@ const currentUser = asyncHandler(async (req: Request, res: Response) => {
     res.status(401);
     throw new Error("Not authenticated");
   }
+  const userId = (req.user as any).id;
+  const result = await pool.query(
+    `SELECT
+       u.id,
+       u.first_name,
+       u.last_name,
+       u.phone_number,
+       u.email,
+       u.created_at,
+       u.email_verified,
+       u.profile_picture,
+       k.selfie_url AS kyc_selfie_url,
+       k.status AS kyc_status
+     FROM users u
+     LEFT JOIN LATERAL (
+       SELECT selfie_url, status
+       FROM kyc
+       WHERE user_id = u.id
+       ORDER BY submission_date DESC NULLS LAST, created_at DESC
+       LIMIT 1
+     ) k ON true
+     WHERE u.id = $1`,
+    [userId],
+  );
+  const user = result.rows[0];
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  const resolvedProfilePicture = user.profile_picture ?? user.kyc_selfie_url ?? null;
 
   res.status(200).json({
     success: true,
-    user: req.user,
+    user: {
+      id: user.id,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phoneNumber: user.phone_number,
+      email: user.email,
+      emailVerified: user.email_verified,
+      createdAt: user.created_at,
+      profile_picture: resolvedProfilePicture,
+      kyc_selfie_url: user.kyc_selfie_url ?? null,
+      kyc_status: user.kyc_status ?? null,
+    },
   });
 });
 

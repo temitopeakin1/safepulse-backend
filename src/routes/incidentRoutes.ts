@@ -38,7 +38,7 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [incident_type, title, location, severity]
+ *             required: [incident_type, title, location, severity, evidence]
  *             properties:
  *               incident_type: { type: string, example: "Traffic Collision" }
  *               title: { type: string, example: "Minivan stuck in street" }
@@ -49,7 +49,8 @@ const router = express.Router();
  *               severity: { type: string, enum: [critical, high, medium, low] }
  *               evidence:
  *                 type: array
- *                 description: At least one of evidence or witness_count required. Uploaded files (PNG, SVG, JPG, MP4). Send URLs after uploading.
+ *                 minItems: 1
+ *                 description: Required. At least one file after POST /incidents/evidence/upload — send file_url (and optional file_name, file_type) per item.
  *                 items:
  *                   type: object
  *                   required: [file_url]
@@ -60,7 +61,7 @@ const router = express.Router();
  *               witness_count:
  *                 type: integer
  *                 minimum: 0
- *                 description: Number of witnesses (alternative to evidence; at least one of evidence or witness_count required)
+ *                 description: Optional additional witness count (does not replace required evidence)
  *     responses:
  *       201:
  *         description: Incident reported successfully

@@ -45,7 +45,7 @@ export interface CreateIncidentInput {
   latitude?: number;
   longitude?: number;
   severity: Severity;
-  evidence?: EvidenceItem[];
+  evidence: EvidenceItem[];
   witness_count?: number;
   reporter_trust_level_at_submission?: number;
 }
@@ -71,11 +71,8 @@ export const createIncident = async (
       : "[]";
   const witnessCount = Math.max(0, input.witness_count ?? 0);
   const hasEvidence =
-    input.evidence &&
-    Array.isArray(input.evidence) &&
-    input.evidence.length > 0;
-  const hasSupport = hasEvidence || witnessCount >= 1;
-  const initialStatus: IncidentStatus = hasSupport
+    Array.isArray(input.evidence) && input.evidence.length > 0;
+  const initialStatus: IncidentStatus = hasEvidence
     ? "under_review"
     : "unverified";
   const publicTitle = `Reported ${input.incident_type} in ${input.location} — ${initialStatus}`;

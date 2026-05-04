@@ -42,19 +42,15 @@ export const createIncidentSchema = z
     latitude: z.number().optional(),
     longitude: z.number().optional(),
     severity: severitySchema,
-    evidence: z.array(evidenceItemSchema).optional().default([]),
+    evidence: z
+      .array(evidenceItemSchema)
+      .min(
+        1,
+        "Evidence is required: upload at least one photo, video, audio file, or document.",
+      ),
     witness_count: z.number().int().min(0).optional().default(0),
   })
-  .strict()
-  .refine(
-    (data) =>
-      (data.evidence && data.evidence.length > 0) ||
-      (data.witness_count ?? 0) >= 1,
-    {
-      message:
-        "Unverified claim — please add at least one of: photo, video, audio, document, or witness count.",
-    },
-  );
+  .strict();
 
 export const verifyIncidentSchema = z
   .object({

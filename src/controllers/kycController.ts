@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import * as KYCModel from "../models/kycModel";
 import { uploadKycBuffer } from "../utils/uploadToCloud";
+import pool from "../config/db";
 
 interface FileObject {
   file_url: string;
@@ -132,6 +133,12 @@ export const submitKYC = asyncHandler(async (req: Request, res: Response) => {
 
       throw err;
     }
+
+    // Persist selfie as dashboard profile picture source-of-truth.
+    await pool.query(
+      "UPDATE users SET profile_picture = $1 WHERE id = $2",
+      [selfie.file_url, user_id],
+    );
 
     res.status(200).json({
       success: true,

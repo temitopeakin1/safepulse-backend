@@ -21,7 +21,6 @@ export const analyzeMediaByUrl = async (
   const apiKey = process.env.MEDIA_ANALYSIS_API_KEY;
 
   if (!endpoint) {
-    // Safe fallback for local/dev when provider is not configured.
     return {
       score: 0.1,
       labels: { source: "fallback", reason: "MEDIA_ANALYSIS_API_URL missing" },

@@ -18,3 +18,8 @@ WHERE public_title IS NULL;
 COMMENT ON COLUMN incidents.witness_count IS 'Number of witnesses; with evidence, supports under_review status';
 COMMENT ON COLUMN incidents.public_title IS 'Defamation-safe title for public display (no individual names)';
 COMMENT ON COLUMN incidents.public_description IS 'Defamation-safe description for public display';
+
+
+
+
+
