@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { DatabaseError } from "pg";
 import asyncHandler from "express-async-handler";
 import pool from "../config/db";
 import bcrypt from "bcrypt";
@@ -98,8 +99,8 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     }
 
     res.status(201).json(payload);
-  } catch (error: any) {
-    if (error.code === "23505") {
+  } catch (error: unknown) {
+    if (error instanceof DatabaseError && error.code === "23505") {
       res.status(409);
       const constraint = error.constraint ?? "";
       if (constraint.includes("phone")) {
@@ -220,7 +221,7 @@ const resendVerificationEmail = asyncHandler(
       });
       return;
     }
-    if ((user as any).email_verified) {
+    if (user.email_verified) {
       res.status(200).json({
         success: true,
         message: "Email is already verified. You can log in.",
@@ -238,11 +239,7 @@ const resendVerificationEmail = asyncHandler(
     );
     const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
     const verificationLink = `${clientUrl}/verify-email?token=${token}`;
-    await sendVerificationEmail(
-      (user as any).email,
-      verificationLink,
-      (user as any).first_name,
-    );
+    await sendVerificationEmail(user.email, verificationLink, user.first_name);
     if (process.env.NODE_ENV !== "production") {
       console.log("[EMAIL VERIFICATION LINK]", verificationLink);
     }
@@ -291,14 +288,14 @@ const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   const resetLink = `${clientUrl}/reset-password?token=${token}`;
 
   const emailSent = await sendResetPasswordEmail(
-    (user as any).email,
+    user.email,
     resetLink,
-    (user as any).first_name,
+    user.first_name,
   );
   if (!emailSent) {
     console.warn(
       "[RESET PASSWORD] Email could not be sent to",
-      (user as any).email,
+      user.email,
       "- check SMTP config and server logs above.",
     );
   }
@@ -421,7 +418,7 @@ const currentUser = asyncHandler(async (req: Request, res: Response) => {
     res.status(401);
     throw new Error("Not authenticated");
   }
-  const userId = (req.user as any).id;
+  const userId = req.user.id;
   const result = await pool.query(
     `SELECT
        u.id,
@@ -476,7 +473,7 @@ const updateProfile = asyncHandler(async (req: Request, res: Response) => {
     res.status(401);
     throw new Error("Not authenticated");
   }
-  const userId = (req.user as any).id;
+  const userId = req.user.id;
   const body = req.validated as UpdateProfileInput;
 
   if (body.email) {
@@ -529,7 +526,7 @@ const getNotificationPreferences = asyncHandler(
       res.status(401);
       throw new Error("Not authenticated");
     }
-    const userId = (req.user as any).id;
+    const userId = req.user.id;
     const prefs = await NotificationPreferencesModel.getPreferences(userId);
     res.status(200).json({
       success: true,
@@ -549,7 +546,7 @@ const updateNotificationPreferences = asyncHandler(
       res.status(401);
       throw new Error("Not authenticated");
     }
-    const userId = (req.user as any).id;
+    const userId = req.user.id;
     const body = req.validated as NotificationPreferencesInput;
     const updated = await NotificationPreferencesModel.updatePreferences(
       userId,
@@ -577,7 +574,7 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
     res.status(401);
     throw new Error("Not authenticated");
   }
-  const userId = (req.user as any).id;
+  const userId = req.user.id;
   const body = req.validated as ChangePasswordInput;
   const user = await UserModel.findUserById(userId);
   if (!user || !user.password) {

@@ -2,10 +2,14 @@ import pool from "../config/db";
 
 export interface User {
   id: string;
-  username: string;
+  username?: string;
   email: string;
-  password: string;
-  created_at: Date;
+  password?: string;
+  created_at?: Date;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  email_verified?: boolean;
 }
 
 export const findUserByEmail = async (email: string): Promise<User | null> => {
